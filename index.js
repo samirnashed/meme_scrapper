@@ -13,76 +13,56 @@ let test;
 //   });
 // }
 
+
+
+
 const path = '/Users/samirnashed/Documents/Web_Scraper/componenets/JSON/urls.json';
 let main_URLS = [];
 let whole_array=[]
 let bad_Urls = 0;
 let time = 'before';
 
-function mount_json(){
-  fs.readFile(path, "utf8", (err, jsonString) => {
-    if (err) {
-      console.error("File read failed:", err);
-      return;
-    }
-    let test = JSON.parse(jsonString);
-    main_URLS = test.data
-  });
-}
-
-async function writeToFile (html) {
-  let test = [];
-  test.push(html)
-  const json = JSON.stringify(test)
-
-  fs.writeFile(path, json, (err) => {
-    if (err) {
-      console.error(err)
-      throw err
-    }
-    console.log('Saved data to file.')
-  })
-}
-
-async function check(counter){
-  try{
-    let html = whole_array[counter].url
+async function check(html){
     axios.get(html)
     .then(response => {
       var data = response.status;
       if(data != 404){
         var testing = html.substring(html.lastIndexOf('/')+1);
         var name = testing.split('?')[0];
-        let title_temp = whole_array[counter].title
-        if(whole_array[counter].thumbnail === "nsfw"){
-          name = "[NSFW]_"+name;
+        // console.log("NAME: ",name)
+        // console.log(name.lastIndexOf('.'))
+        if(name.lastIndexOf('.') === -1){
+          console.log("FIX: ", name+ ".png")
         }
+        
+        // console.log(name)
+        // let title_temp = whole_array[counter].title
+        // if(whole_array[counter].over_18 === true){
+        //   name = "[NSFW]_"+name;
+        // }
+        // console.log(name)
         download(html,name);
       }
       else{
         console.error("Status: " + 404);
       }
-    }).catch(err => console.error("error avoided"))
-    }
-    catch(err){
-      console.error("CHECK OUT")
-    }  
+    }).catch(err => {
+      null
+      // console.error("error avoided")
+    })
 }
 
 var download = async function downloadImage(url, filepath) {
   return new Promise((resolve, reject) => {
       client.get(url, (res) => {
-        console.log(filepath)
         filepath = "componenets/pictures/" + filepath
           if (res.statusCode === 200) {
             res.pipe(fs.createWriteStream(filepath))
-                .on('error', reject)
-                .once('close', () => resolve(filepath));
+            .on('error', reject)
+            .once('close', () => resolve(filepath));
           } else {
-              // Consume response data to free up memory
-              res.resume();
-              // reject(new Error(`Request Failed With a Status Code: ${res.statusCode}`));
-
+            res.resume();
+            // reject(new Error(`Request Failed With a Status Code: ${res.statusCode}`));
           }
       });
   });
@@ -106,30 +86,21 @@ const returnInfo_picture = []
 
 async function get_urls(search,letscount){
 
-  var html= 'https://api.pushshift.io/reddit/search/submission/?'+search+'&size=500&'+time+'='+letscount+'h&after='+letscount+1+'h&fields=url,title,thumbnail,is_reddit_media_domain&post_hint=image'
-  //console.log(html)
-  try{
-    axios.get(html)
+  var html= 'https://api.pushshift.io/reddit/search/submission/?'+search+'&size=500&'+time+'='+letscount+'h&after='+letscount+1+'h&fields=url,title,thumbnail,over_18,is_reddit_media_domain&post_hint=image'
+  axios.get(html)
     .then(response => response.data)
     .then(data =>{ 
       var length_data = data.data.length;
       var _counter_ = 0
       while(_counter_ < length_data){
-        //console.log(data.data[_counter_].is_reddit_media_domain)
           const URL = data.data[_counter_].url
           if(returnInfo_picture.indexOf(URL) && !URL.indexOf('https://')){
-              whole_array.push(data.data[_counter_]);
+              // whole_array.push(data.data[_counter_]);
               returnInfo_picture.push(URL);
         }
-        
-      
       _counter_++
     }
     }).catch(err=>console.error(err))
-  }
-  catch(err){
-    console.log("out url",err)
-  }
   
 }
 
@@ -161,37 +132,65 @@ function wait(){
   });
 }
 
+const callback = async function(data) {
+  let array = data.images_results
+  for (let index = 0; index < array.length; index++) {
+    let current_url = array[index].original
+    if(!current_url.indexOf('https://'))
+    returnInfo_picture.push(current_url)
+  }
+};
 
+function search_google(params){
+  return new Promise((resolve,reject)=>{
+    search.json(params, callback);
+    setTimeout(()=>{
+          resolve();
+      ;} , 2500
+    );
+  });
+}
 
 
 async function callerFun(){
   var letscount = 0
+  
   let counter = 0
   var Urls = ['q=meme','q=memes','subreddit=DankMemesFromSite19','subreedit=terriblefacebookmemes','subreddit=raimimemes','subreddit=PrequelMemes','subreddit=PoliticalCompassMemes','subreddit=ComedyCemetery','subreddit=marvelmemes','subreddit=memes','subreddit=dankmemes','subreddit=Memes_Of_The_Dank','subreddit=meme','subreddit=Animemes','subreddit=dndmemes','subreddit=PoliticalCompassMemes','subreddit=memesITA','subreddit=goodanimemes','subreddit=MemeEconomy','subreddit=MemeTemplatesOfficial','subreddit=HistoryMemes','subreddit=raimimemes','subreddit=MinecraftMemes','subreddit=DankMemesFromSite19','subreddit=lotrmemes','subreddit=MemesIRL','subreddit=Memeulous','subreddit=memexico']
   let url_counter = 0
-  // mount_json()
   while(true){
-    console.log(letscount)
+    // console.log(letscount)
+    var params = {
+      engine: "google",
+      ijn: String(letscount),
+      q: "meme",
+      google_domain: "google.com",
+      num: "100",
+      tbm: "isch",
+      no_cache: "true"
+    };
+    // try{
+    //   await search_google(params)
+    // }
+    // catch(err){
+    //   console.log(err)
+    // }
+
+    // console.log("Google Searched")
     while ( url_counter <Urls.length){
       try{
-        console.log(Urls[url_counter])
+        // console.log("Total URLS: ", returnInfo_picture.length)
         await testAsync(Urls[url_counter],letscount);
-        // console.log("TEST")
-        console.log("Total URLS: ", returnInfo_picture.length)
-        
         while(counter < returnInfo_picture.length){
           try{
-            // console.log(returnInfo_picture[counter])
-            await testfinal(counter)
+            await testfinal(returnInfo_picture[counter])
           }
           catch(err){
             console.error(err)
-            console.log("RET")
           }
           counter++
         }
         console.log("downloadable pictures: ", returnInfo_picture.length-bad_Urls)
-        // console.log("BAD")
       }
       catch(err){
         console.error(err)
@@ -200,7 +199,7 @@ async function callerFun(){
     }
     
     url_counter = 0;
-    letscount = letscount +5
+    letscount++
   }
   
   
