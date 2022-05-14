@@ -15,7 +15,9 @@ let test;
 
 const path = '/Users/samirnashed/Documents/Web_Scraper/componenets/JSON/urls.json';
 let main_URLS = [];
-
+let whole_array=[]
+let bad_Urls = 0;
+let time = 'before';
 
 function mount_json(){
   fs.readFile(path, "utf8", (err, jsonString) => {
@@ -42,13 +44,37 @@ async function writeToFile (html) {
   })
 }
 
+async function check(counter){
+  try{
+    let html = whole_array[counter].url
+    axios.get(html)
+    .then(response => {
+      var data = response.status;
+      if(data != 404){
+        var testing = html.substring(html.lastIndexOf('/')+1);
+        var name = testing.split('?')[0];
+        let title_temp = whole_array[counter].title
+        if(whole_array[counter].thumbnail === "nsfw"){
+          name = "[NSFW]_"+name;
+        }
+        download(html,name);
+      }
+      else{
+        console.error("Status: " + 404);
+      }
+    }).catch(err => console.error("error avoided"))
+    }
+    catch(err){
+      console.error("CHECK OUT")
+    }  
+}
 
 var download = async function downloadImage(url, filepath) {
   return new Promise((resolve, reject) => {
       client.get(url, (res) => {
+        console.log(filepath)
         filepath = "componenets/pictures/" + filepath
           if (res.statusCode === 200) {
-            console.log(url)
             res.pipe(fs.createWriteStream(filepath))
                 .on('error', reject)
                 .once('close', () => resolve(filepath));
@@ -62,37 +88,12 @@ var download = async function downloadImage(url, filepath) {
   });
 }
 
-
-async function check(html){
-  try{
-    axios.get(html)
-    .then(response => {
-      var data = response.status;
-      if(data != 404){
-        var testing = html.substring(html.lastIndexOf('/')+1);
-        var name = testing.split('?')[0];
-        download(html,name);
-      }
-      else{
-        console.error("Status: " + 404);
-      }
-    }).catch(err => console.error("error avoided"))
-    }
-    catch(err){
-      console.error("CHECK OUT")
-    }
-  
-}
-function testfinal(html){
+async function testfinal(counter){
   return new Promise((resolve,reject)=>{
-    try{
-      check(html)}
-      catch(err){
-        console.log("a7a")
-      }
+    check(counter)
     setTimeout(()=>{
           resolve();
-      ;} , 50
+      ;} , 250
     );
   });
 }
@@ -103,8 +104,10 @@ function testfinal(html){
 const returnInfo_picture = []
 
 
-async function get_urls(letscount){
-  var html= 'https://api.pushshift.io/reddit/search/submission/?q=memes&size=500&before='+letscount+'m&fields=post_hint,url,title,is_reddit_media_domain,thumbnail&post_hint=image'
+async function get_urls(search,letscount){
+
+  var html= 'https://api.pushshift.io/reddit/search/submission/?'+search+'&size=500&'+time+'='+letscount+'h&after='+letscount+1+'h&fields=url,title,thumbnail,is_reddit_media_domain&post_hint=image'
+  //console.log(html)
   try{
     axios.get(html)
     .then(response => response.data)
@@ -112,9 +115,11 @@ async function get_urls(letscount){
       var length_data = data.data.length;
       var _counter_ = 0
       while(_counter_ < length_data){
-        if(data.data[_counter_].is_reddit_media_domain == true){
+        //console.log(data.data[_counter_].is_reddit_media_domain)
           const URL = data.data[_counter_].url
-          returnInfo_picture.push(URL);
+          if(returnInfo_picture.indexOf(URL) && !URL.indexOf('https://')){
+              whole_array.push(data.data[_counter_]);
+              returnInfo_picture.push(URL);
         }
         
       
@@ -128,12 +133,12 @@ async function get_urls(letscount){
   
 }
 
-function testAsync(trysth){
+function testAsync(search,count){
   return new Promise((resolve,reject)=>{
-    get_urls(trysth)
+    get_urls(search,count)
     setTimeout(()=>{
       resolve();
-      ;} , 5000
+      ;} , 2500
     );
   });
 }
@@ -147,34 +152,55 @@ function writejson(){
   });
 }
 
+function wait(){
+  return new Promise((resolve,reject)=>{
+    setTimeout(()=>{
+          resolve();
+      ;} , 550000
+    );
+  });
+}
+
 
 
 
 async function callerFun(){
-  var letscount = 1
+  var letscount = 0
   let counter = 0
+  var Urls = ['q=meme','q=memes','subreddit=DankMemesFromSite19','subreedit=terriblefacebookmemes','subreddit=raimimemes','subreddit=PrequelMemes','subreddit=PoliticalCompassMemes','subreddit=ComedyCemetery','subreddit=marvelmemes','subreddit=memes','subreddit=dankmemes','subreddit=Memes_Of_The_Dank','subreddit=meme','subreddit=Animemes','subreddit=dndmemes','subreddit=PoliticalCompassMemes','subreddit=memesITA','subreddit=goodanimemes','subreddit=MemeEconomy','subreddit=MemeTemplatesOfficial','subreddit=HistoryMemes','subreddit=raimimemes','subreddit=MinecraftMemes','subreddit=DankMemesFromSite19','subreddit=lotrmemes','subreddit=MemesIRL','subreddit=Memeulous','subreddit=memexico']
+  let url_counter = 0
   // mount_json()
   while(true){
-    try{
-      console.log(letscount)
-      await testAsync(letscount);
-      console.log("TEST")
-    }
-    catch(err){
-      console.error(err)
-    }
-    while(counter < returnInfo_picture.length){
+    console.log(letscount)
+    while ( url_counter <Urls.length){
       try{
-        await testfinal(returnInfo_picture[counter])
+        console.log(Urls[url_counter])
+        await testAsync(Urls[url_counter],letscount);
+        // console.log("TEST")
+        console.log("Total URLS: ", returnInfo_picture.length)
+        
+        while(counter < returnInfo_picture.length){
+          try{
+            // console.log(returnInfo_picture[counter])
+            await testfinal(counter)
+          }
+          catch(err){
+            console.error(err)
+            console.log("RET")
+          }
+          counter++
+        }
+        console.log("downloadable pictures: ", returnInfo_picture.length-bad_Urls)
+        // console.log("BAD")
       }
       catch(err){
         console.error(err)
-        console.log("RET")
       }
-      counter++
+      url_counter++
     }
-    console.log("BAD")
-    letscount = letscount +1
+    
+    url_counter = 0;
+    letscount = letscount +5
   }
   
   
